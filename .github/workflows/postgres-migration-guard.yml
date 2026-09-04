@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'db/migrations/**'
+      - 'src/ingestion/**'
+      - 'tests/test_raw_first_ingestion.py'
       - '.github/workflows/postgres-migration-guard.yml'
   pull_request:
     paths:
       - 'db/migrations/**'
+      - 'src/ingestion/**'
+      - 'tests/test_raw_first_ingestion.py'
       - '.github/workflows/postgres-migration-guard.yml'
 
 permissions:
@@ -41,6 +45,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Run RAW-first deterministic tests
+        run: python -m unittest tests.test_raw_first_ingestion -v
+
       - name: Apply migrations
         run: |
           psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
@@ -53,6 +60,59 @@ jobs:
           test "$tables" = "11"
           triggers=$(psql -Atc "SELECT count(*) FROM pg_trigger WHERE tgname IN ('forecasts_append_only','data_snapshot_components_cutoff_guard','forecast_probability_vector_guard','forecast_outcome_target_guard') AND NOT tgisinternal;")
           test "$triggers" = "4"
+
+      - name: Verify minimal RAW-first transaction
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO data_sources(source_id,category,provider,dataset,status,point_in_time_rating,revision_policy,terms_review_status)
+          VALUES ('market.coinbase.exchange.btcusd.candles','market','Coinbase Exchange','BTC-USD candles','approved','conditional','append','reviewed');
+
+          BEGIN;
+          INSERT INTO raw_events(raw_event_id,source_id,source_record_id,source_event_at,observed_at,ingested_at,available_at,content_hash,payload_ref,mime_type)
+          VALUES ('10000000-0000-5000-8000-000000000001','market.coinbase.exchange.btcusd.candles','fixture-request-v1','2026-09-01T00:00:00Z','2026-09-04T12:40:56Z','2026-09-04T12:41:00Z','2026-09-04T12:40:56Z','fixture-hash-v1','fixture://coinbase-v1','application/json')
+          ON CONFLICT (raw_event_id) DO NOTHING;
+          INSERT INTO observations(observation_id,metric_id,asset,venue,value,unit,event_at,available_at,quality_status,normalizer_version)
+          VALUES ('20000000-0000-5000-8000-000000000001','market.close','BTC','coinbase',108253.09,'USD','2026-09-01T00:00:00Z','2026-09-04T12:40:56Z','valid','coinbase-candles-v0.1')
+          ON CONFLICT (observation_id) DO NOTHING;
+          INSERT INTO observation_raw_events(observation_id,raw_event_id)
+          VALUES ('20000000-0000-5000-8000-000000000001','10000000-0000-5000-8000-000000000001')
+          ON CONFLICT DO NOTHING;
+          COMMIT;
+
+          BEGIN;
+          INSERT INTO raw_events(raw_event_id,source_id,source_record_id,source_event_at,observed_at,ingested_at,available_at,content_hash,payload_ref,mime_type)
+          VALUES ('10000000-0000-5000-8000-000000000001','market.coinbase.exchange.btcusd.candles','fixture-request-v1','2026-09-01T00:00:00Z','2026-09-04T12:40:56Z','2026-09-04T12:41:00Z','2026-09-04T12:40:56Z','fixture-hash-v1','fixture://coinbase-v1','application/json')
+          ON CONFLICT (raw_event_id) DO NOTHING;
+          INSERT INTO observations(observation_id,metric_id,asset,venue,value,unit,event_at,available_at,quality_status,normalizer_version)
+          VALUES ('20000000-0000-5000-8000-000000000001','market.close','BTC','coinbase',108253.09,'USD','2026-09-01T00:00:00Z','2026-09-04T12:40:56Z','valid','coinbase-candles-v0.1')
+          ON CONFLICT (observation_id) DO NOTHING;
+          INSERT INTO observation_raw_events(observation_id,raw_event_id)
+          VALUES ('20000000-0000-5000-8000-000000000001','10000000-0000-5000-8000-000000000001')
+          ON CONFLICT DO NOTHING;
+          COMMIT;
+          SQL
+
+          test "$(psql -Atc "SELECT count(*) FROM raw_events WHERE raw_event_id='10000000-0000-5000-8000-000000000001';")" = "1"
+          test "$(psql -Atc "SELECT count(*) FROM observations WHERE observation_id='20000000-0000-5000-8000-000000000001';")" = "1"
+          test "$(psql -Atc "SELECT count(*) FROM observation_raw_events WHERE observation_id='20000000-0000-5000-8000-000000000001';")" = "1"
+
+      - name: Verify transaction rollback leaves no partial RAW unit
+        shell: bash
+        run: |
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          INSERT INTO raw_events(raw_event_id,source_id,source_record_id,observed_at,ingested_at,available_at,content_hash,payload_ref)
+          VALUES ('10000000-0000-5000-8000-000000000002','market.coinbase.exchange.btcusd.candles','fixture-request-fail','2026-09-04T12:42:00Z','2026-09-04T12:42:01Z','2026-09-04T12:42:00Z','fixture-hash-fail','fixture://fail');
+          INSERT INTO observations(observation_id,metric_id,asset,value,unit,event_at,available_at,quality_status,normalizer_version)
+          VALUES ('20000000-0000-5000-8000-000000000002','market.close','BTC',1,'USD','2026-09-01T00:00:00Z','2026-09-04T12:42:00Z','not-valid','test');
+          COMMIT;
+          SQL
+          then
+            echo 'expected transaction to fail'
+            exit 1
+          fi
+          test "$(psql -Atc "SELECT count(*) FROM raw_events WHERE raw_event_id='10000000-0000-5000-8000-000000000002';")" = "0"
 
       - name: Seed minimal valid forecast chain
         run: |
