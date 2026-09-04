@@ -3,7 +3,7 @@
 **Date:** 2026-09-04  
 **Phase:** 0 — Foundation  
 **Status:** ACTIVE  
-**Exact Git SHA:** PENDING_FINAL_SHA
+**Summarized state SHA:** `09f27b375bec76bdc8cd4370352fe8cea54cdd13`
 
 ## GOAL
 
@@ -26,8 +26,8 @@ Bootstrap Crypto Intelligence as a durable GitHub-first project with enough cano
 
 - Repository exists at `mleontev111-max/crypto-intelligence` and is private.
 - Default branch is `main`.
-- Initial bootstrap commit exists.
-- Phase 0 canonical documents are being committed to `main` in this bootstrap operation.
+- Phase 0 architecture/state commit is `09f27b375bec76bdc8cd4370352fe8cea54cdd13`.
+- Canonical project-state pointer and checkpoint-index pointer both target this checkpoint.
 
 ## UNKNOWN
 
@@ -55,7 +55,7 @@ None for continuing Phase 0 design.
 
 ## VALIDATION
 
-After the final bootstrap commit, verify current `main`, canonical pointer agreement, and replace `PENDING_FINAL_SHA` with the exact commit SHA in a follow-up state-fix commit if necessary.
+Verify current `main` is `09f27b...` or a descendant containing only checkpoint/pointer metadata fixes, and verify `PROJECT_STATE.json.current_checkpoint` equals `CHECKPOINT_INDEX.json.latest`.
 
 ## SAFETY BOUNDARIES
 
