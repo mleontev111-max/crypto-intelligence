@@ -40,7 +40,7 @@ env:
   PGPASSWORD: ci
   PGDATABASE: crypto_intelligence_test
   PYTHONPATH: .
-  RAW_STORAGE_DIR: ${{ runner.temp }}/crypto-intelligence-raw
+  RAW_STORAGE_DIR: /tmp/crypto-intelligence-raw
 
 jobs:
   dry-run:
