@@ -13,32 +13,59 @@ BASE_URL = "https://api.stlouisfed.org/fred/series/observations"
 ALLOWED_SERIES = {"DGS2", "DGS10"}
 
 
-def build_url(*, series_id: str, api_key: str, realtime_start: str, realtime_end: str) -> str:
+def build_url(
+    *,
+    series_id: str,
+    api_key: str,
+    realtime_start: str,
+    realtime_end: str,
+    observation_start: str | None = None,
+    observation_end: str | None = None,
+) -> str:
     if series_id not in ALLOWED_SERIES:
         raise ValueError("unapproved FRED series")
     if not api_key:
         raise ValueError("runtime FRED api_key is required")
     if not realtime_start or not realtime_end:
         raise ValueError("realtime_start and realtime_end are required")
-    query = urlencode({
+    if (observation_start is None) != (observation_end is None):
+        raise ValueError("observation_start and observation_end must be supplied together")
+    query_values = {
         "series_id": series_id,
         "api_key": api_key,
         "file_type": "json",
         "realtime_start": realtime_start,
         "realtime_end": realtime_end,
-    })
+    }
+    if observation_start is not None:
+        query_values["observation_start"] = observation_start
+        query_values["observation_end"] = observation_end
+    query = urlencode(query_values)
     return f"{BASE_URL}?{query}"
 
 
-def safe_request_metadata(*, series_id: str, realtime_start: str, realtime_end: str) -> dict[str, str]:
+def safe_request_metadata(
+    *,
+    series_id: str,
+    realtime_start: str,
+    realtime_end: str,
+    observation_start: str | None = None,
+    observation_end: str | None = None,
+) -> dict[str, str]:
     if series_id not in ALLOWED_SERIES:
         raise ValueError("unapproved FRED series")
-    return {
+    if (observation_start is None) != (observation_end is None):
+        raise ValueError("observation_start and observation_end must be supplied together")
+    metadata = {
         "source_id": SOURCE_ID,
         "series_id": series_id,
         "realtime_start": realtime_start,
         "realtime_end": realtime_end,
     }
+    if observation_start is not None:
+        metadata["observation_start"] = observation_start
+        metadata["observation_end"] = observation_end
+    return metadata
 
 
 def parse_observations(payload: object) -> list[dict[str, object]]:
