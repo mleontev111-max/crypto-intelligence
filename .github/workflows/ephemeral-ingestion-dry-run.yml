@@ -31,6 +31,7 @@ env:
   PGUSER: ci
   PGPASSWORD: ci
   PGDATABASE: crypto_intelligence_test
+  PYTHONPATH: .
 
 jobs:
   dry-run:
