@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crypto-intelligence.local/schemas/observation.schema.json",
+  "title": "Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["observation_id","metric_id","asset","value","unit","event_at","available_at","raw_event_ids","schema_version"],
+  "properties": {
+    "observation_id": {"type":"string","minLength":1},
+    "metric_id": {"type":"string","minLength":1},
+    "asset": {"type":"string","minLength":1},
+    "venue": {"type":["string","null"]},
+    "value": {"type":"number"},
+    "unit": {"type":"string","minLength":1},
+    "event_at": {"type":"string","format":"date-time"},
+    "available_at": {"type":"string","format":"date-time"},
+    "revision": {"type":["string","integer","null"]},
+    "quality_status": {"type":"string","enum":["valid","suspect","missing_repaired"]},
+    "raw_event_ids": {"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "normalizer_version": {"type":"string","minLength":1},
+    "schema_version": {"type":"string","const":"0.1"}
+  }
+}
