@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crypto-intelligence.local/schemas/model-version.schema.json",
+  "title": "ModelVersion",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["model_version_id","model_family","created_at","code_commit_sha","training_snapshot_id","config_hash","artifact_ref","status","schema_version"],
+  "properties": {
+    "model_version_id": {"type":"string","minLength":1},
+    "model_family": {"type":"string","minLength":1},
+    "created_at": {"type":"string","format":"date-time"},
+    "code_commit_sha": {"type":"string","minLength":7},
+    "training_snapshot_id": {"type":"string","minLength":1},
+    "calibration_snapshot_id": {"type":["string","null"]},
+    "config_hash": {"type":"string","minLength":16},
+    "artifact_ref": {"type":"string","minLength":1},
+    "calibration_method": {"type":["string","null"]},
+    "status": {"type":"string","enum":["baseline","challenger","champion","retired"]},
+    "parent_model_version_id": {"type":["string","null"]},
+    "schema_version": {"type":"string","const":"0.1"}
+  }
+}
