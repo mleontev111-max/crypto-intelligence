@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-fred-live-probe-verified.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-raw-first-ingestion-fixture-verified.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-raw-first-ingestion-fixture-verified.md",
+      "summary": "Verified minimal fixture-driven RAW-first ingestion, Coinbase/FRED mapping, PostgreSQL atomicity/idempotency, and advanced to an ephemeral CI-only end-to-end live-source dry run while keeping persistent live ingestion disabled."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-fred-live-probe-verified.md",
       "summary": "Verified secret-safe live Coinbase and FRED DGS2/DGS10 zero-write probes, archived quant research v0.3 as non-canonical input, and advanced the gate to fixture-driven RAW-first PostgreSQL ingestion design."
     },
