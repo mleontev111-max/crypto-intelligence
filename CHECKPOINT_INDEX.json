@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-raw-first-ingestion-fixture-verified.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-ephemeral-ingestion-e2e-verified.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-ephemeral-ingestion-e2e-verified.md",
+      "summary": "Verified real Coinbase/FRED fetch-to-ephemeral-PostgreSQL ingestion with 3 RAW responses, 30 observations, complete lineage, zero PIT violations, secret redaction, and deterministic idempotency; advanced to a disabled-by-default persistent collector with actual RAW byte storage."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-raw-first-ingestion-fixture-verified.md",
       "summary": "Verified minimal fixture-driven RAW-first ingestion, Coinbase/FRED mapping, PostgreSQL atomicity/idempotency, and advanced to an ephemeral CI-only end-to-end live-source dry run while keeping persistent live ingestion disabled."
     },
