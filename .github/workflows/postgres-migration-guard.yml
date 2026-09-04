@@ -1,0 +1,69 @@
+name: PostgreSQL Migration Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'db/migrations/**'
+      - '.github/workflows/postgres-migration-guard.yml'
+  pull_request:
+    paths:
+      - 'db/migrations/**'
+      - '.github/workflows/postgres-migration-guard.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: crypto_intelligence_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d crypto_intelligence_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: ci
+      PGPASSWORD: ci
+      PGDATABASE: crypto_intelligence_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        run: psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
+
+      - name: Verify core tables
+        shell: bash
+        run: |
+          count=$(psql -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('data_sources','raw_events','observations','observation_raw_events','data_snapshots','data_snapshot_components','model_versions','target_definitions','forecasts','forecast_probabilities','forecast_outcomes');")
+          test "$count" = "11"
+
+      - name: Verify append-only trigger exists
+        shell: bash
+        run: |
+          count=$(psql -Atc "SELECT count(*) FROM pg_trigger WHERE tgname='forecasts_append_only' AND NOT tgisinternal;")
+          test "$count" = "1"
+
+      - name: Roll back migration
+        run: psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.down.sql
+
+      - name: Verify rollback removed core tables
+        shell: bash
+        run: |
+          count=$(psql -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('data_sources','raw_events','observations','observation_raw_events','data_snapshots','data_snapshot_components','model_versions','target_definitions','forecasts','forecast_probabilities','forecast_outcomes');")
+          test "$count" = "0"
+
+      - name: Re-apply migration
+        run: psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
