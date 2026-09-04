@@ -41,23 +41,75 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply migration
-        run: psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
+      - name: Apply migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
+          psql -v ON_ERROR_STOP=1 -f db/migrations/0002_core_invariants.up.sql
 
-      - name: Verify core tables
+      - name: Verify core tables and triggers
         shell: bash
         run: |
-          count=$(psql -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('data_sources','raw_events','observations','observation_raw_events','data_snapshots','data_snapshot_components','model_versions','target_definitions','forecasts','forecast_probabilities','forecast_outcomes');")
-          test "$count" = "11"
+          tables=$(psql -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('data_sources','raw_events','observations','observation_raw_events','data_snapshots','data_snapshot_components','model_versions','target_definitions','forecasts','forecast_probabilities','forecast_outcomes');")
+          test "$tables" = "11"
+          triggers=$(psql -Atc "SELECT count(*) FROM pg_trigger WHERE tgname IN ('forecasts_append_only','data_snapshot_components_cutoff_guard','forecast_probability_vector_guard','forecast_outcome_target_guard') AND NOT tgisinternal;")
+          test "$triggers" = "4"
 
-      - name: Verify append-only trigger exists
+      - name: Seed minimal valid forecast chain
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO data_snapshots(data_snapshot_id,created_at,cutoff_available_at,manifest_hash)
+          VALUES ('00000000-0000-7000-8000-000000000001', now(), now(), 'manifest-000000000001');
+          INSERT INTO model_versions(model_version_id,model_family,created_at,code_commit_sha,training_snapshot_id,config_hash,artifact_ref,status)
+          VALUES ('baseline-v0','baseline',now(),'0000000','00000000-0000-7000-8000-000000000001','config-hash-00000001','artifact://baseline','baseline');
+          INSERT INTO target_definitions(target_definition_id,asset_scope,horizon,definition_json,created_at,code_commit_sha,status)
+          VALUES ('btc-4h-test','BTC','4h','{}',now(),'0000000','research'),
+                 ('btc-4h-other','BTC','4h','{}',now(),'0000000','research');
+          INSERT INTO forecasts(forecast_id,created_at,asset,horizon,target_definition_id,venue,symbol,reference_price,reference_observed_at,model_version_id,data_snapshot_id,status)
+          VALUES ('00000000-0000-7000-8000-000000000010',now(),'BTC','4h','btc-4h-test','test','BTCUSDT',100000,now(),'baseline-v0','00000000-0000-7000-8000-000000000001','open');
+          BEGIN;
+          INSERT INTO forecast_probabilities(forecast_id,class_key,probability) VALUES
+            ('00000000-0000-7000-8000-000000000010','DOWN',0.2),
+            ('00000000-0000-7000-8000-000000000010','RANGE',0.5),
+            ('00000000-0000-7000-8000-000000000010','UP',0.3);
+          COMMIT;
+          SQL
+
+      - name: Reject snapshot cutoff violation
         shell: bash
         run: |
-          count=$(psql -Atc "SELECT count(*) FROM pg_trigger WHERE tgname='forecasts_append_only' AND NOT tgisinternal;")
-          test "$count" = "1"
+          if psql -v ON_ERROR_STOP=1 -c "INSERT INTO data_snapshot_components(data_snapshot_id,dataset_id,version_or_query_hash,max_available_at) VALUES ('00000000-0000-7000-8000-000000000001','future','hash', (SELECT cutoff_available_at + interval '1 second' FROM data_snapshots WHERE data_snapshot_id='00000000-0000-7000-8000-000000000001'));"; then
+            echo 'expected snapshot cutoff violation to fail'
+            exit 1
+          fi
 
-      - name: Roll back migration
-        run: psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.down.sql
+      - name: Reject outcome target mismatch
+        shell: bash
+        run: |
+          if psql -v ON_ERROR_STOP=1 -c "INSERT INTO forecast_outcomes(outcome_id,forecast_id,resolved_at,target_definition_id,realized_class,realized_return,resolution_data_snapshot_id) VALUES ('00000000-0000-7000-8000-000000000020','00000000-0000-7000-8000-000000000010',now(),'btc-4h-other','UP',0.01,'00000000-0000-7000-8000-000000000001');"; then
+            echo 'expected outcome target mismatch to fail'
+            exit 1
+          fi
+
+      - name: Reject invalid probability vector
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "INSERT INTO forecasts(forecast_id,created_at,asset,horizon,target_definition_id,venue,symbol,reference_price,reference_observed_at,model_version_id,data_snapshot_id,status) VALUES ('00000000-0000-7000-8000-000000000011',now(),'BTC','4h','btc-4h-test','test','BTCUSDT',100000,now(),'baseline-v0','00000000-0000-7000-8000-000000000001','open');"
+          if psql -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          INSERT INTO forecast_probabilities(forecast_id,class_key,probability) VALUES
+            ('00000000-0000-7000-8000-000000000011','DOWN',0.4),
+            ('00000000-0000-7000-8000-000000000011','UP',0.7);
+          COMMIT;
+          SQL
+          then
+            echo 'expected invalid probability vector to fail at commit'
+            exit 1
+          fi
+
+      - name: Roll back migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 -f db/migrations/0002_core_invariants.down.sql
+          psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.down.sql
 
       - name: Verify rollback removed core tables
         shell: bash
@@ -65,5 +117,7 @@ jobs:
           count=$(psql -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('data_sources','raw_events','observations','observation_raw_events','data_snapshots','data_snapshot_components','model_versions','target_definitions','forecasts','forecast_probabilities','forecast_outcomes');")
           test "$count" = "0"
 
-      - name: Re-apply migration
-        run: psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
+      - name: Re-apply migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
+          psql -v ON_ERROR_STOP=1 -f db/migrations/0002_core_invariants.up.sql
