@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-contract-guard-postgres-map.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-core-migration.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-core-migration.md",
+      "summary": "Added and validated reversible PostgreSQL 16 core provenance migration with append-only evidence protection."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-contract-guard-postgres-map.md",
       "summary": "Added automated Phase 0 contract/state guard and PostgreSQL logical-to-physical mapping."
     },
