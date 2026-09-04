@@ -91,10 +91,14 @@ jobs:
       - name: Verify persistent-shaped volumes and database rows
         shell: bash
         run: |
-          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc 'select count(*) from raw_events;')" = "3"
-          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc 'select count(*) from observations;')" = "30"
-          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc 'select count(*) from observation_raw_events;')" = "30"
-          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc \"select count(*) from raw_events where payload_ref like 'file://%';\")" = "3"
+          raw_count=$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc "select count(*) from raw_events;")
+          observation_count=$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc "select count(*) from observations;")
+          lineage_count=$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc "select count(*) from observation_raw_events;")
+          file_ref_count=$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc "select count(*) from raw_events where payload_ref like 'file://%';")
+          test "$raw_count" = "3"
+          test "$observation_count" = "30"
+          test "$lineage_count" = "30"
+          test "$file_ref_count" = "3"
           docker compose --profile manual run --rm --entrypoint sh collector -c 'test "$(find /data/raw -type f -name "*.bin" | wc -l | tr -d " ")" = "3"'
           python - <<'PY'
           import json
