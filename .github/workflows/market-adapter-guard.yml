@@ -6,14 +6,18 @@ on:
     paths:
       - 'src/adapters/**'
       - 'tests/test_coinbase_exchange_candles.py'
+      - 'tests/test_fred_h15_treasury.py'
       - 'docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md'
+      - 'docs/architecture/FRED_H15_TREASURY_ADAPTER_v0.1.md'
       - 'docs/architecture/DATA_SOURCE_REGISTRY.md'
       - '.github/workflows/market-adapter-guard.yml'
   pull_request:
     paths:
       - 'src/adapters/**'
       - 'tests/test_coinbase_exchange_candles.py'
+      - 'tests/test_fred_h15_treasury.py'
       - 'docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md'
+      - 'docs/architecture/FRED_H15_TREASURY_ADAPTER_v0.1.md'
       - 'docs/architecture/DATA_SOURCE_REGISTRY.md'
       - '.github/workflows/market-adapter-guard.yml'
 
@@ -31,8 +35,12 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run write-free adapter tests
-        run: python -m unittest tests.test_coinbase_exchange_candles -v
-      - name: Assert adapter contains no database or trading client imports
+        run: python -m unittest tests.test_coinbase_exchange_candles tests.test_fred_h15_treasury -v
+      - name: Assert adapters contain no database or trading client imports
         shell: bash
         run: |
-          ! grep -Eiq 'psycopg|sqlalchemy|create_order|place_order|/orders|/accounts|api[_-]?key|secret' src/adapters/coinbase_exchange_candles.py
+          ! grep -Eiq 'psycopg|sqlalchemy|create_order|place_order|/orders|/accounts' src/adapters/*.py
+      - name: Assert no literal credential values are committed
+        shell: bash
+        run: |
+          ! grep -Eiq '(api[_-]?key|secret)[[:space:]]*=[[:space:]]*["'\''][A-Za-z0-9_-]{16,}' src/adapters/*.py
