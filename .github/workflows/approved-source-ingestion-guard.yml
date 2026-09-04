@@ -1,0 +1,40 @@
+name: Approved Source Ingestion Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/adapters/coinbase_exchange_candles.py'
+      - 'src/adapters/fred_h15_treasury.py'
+      - 'src/ingestion/raw_first.py'
+      - 'src/ingestion/approved_sources.py'
+      - 'tests/test_raw_first_ingestion.py'
+      - 'tests/test_approved_source_ingestion.py'
+      - '.github/workflows/approved-source-ingestion-guard.yml'
+  pull_request:
+    paths:
+      - 'src/adapters/coinbase_exchange_candles.py'
+      - 'src/adapters/fred_h15_treasury.py'
+      - 'src/ingestion/raw_first.py'
+      - 'src/ingestion/approved_sources.py'
+      - 'tests/test_raw_first_ingestion.py'
+      - 'tests/test_approved_source_ingestion.py'
+      - '.github/workflows/approved-source-ingestion-guard.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run ingestion mapping tests
+        run: |
+          python -m unittest tests.test_raw_first_ingestion -v
+          python -m unittest tests.test_approved_source_ingestion -v
+      - name: Assert mapping remains network and DB free
+        shell: bash
+        run: |
+          ! grep -Eiq '(urllib\.request|requests|httpx|psycopg|sqlalchemy)' src/ingestion/approved_sources.py src/ingestion/raw_first.py
