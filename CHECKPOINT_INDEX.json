@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-data-contracts.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-contract-guard-postgres-map.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-contract-guard-postgres-map.md",
+      "summary": "Added automated Phase 0 contract/state guard and PostgreSQL logical-to-physical mapping."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-data-contracts.md",
       "summary": "Added source registry and canonical point-in-time contracts for RAW, observations, snapshots, model versions, forecasts and outcomes."
     },
