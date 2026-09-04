@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-bootstrap.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-data-contracts.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-data-contracts.md",
+      "summary": "Added source registry and canonical point-in-time contracts for RAW, observations, snapshots, model versions, forecasts and outcomes."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-bootstrap.md",
       "summary": "Bootstrapped project constitution, continuity protocol, Phase 0 architecture, BTC-only MVP scope, forecast ledger and model lifecycle."
     }
