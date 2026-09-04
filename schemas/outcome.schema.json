@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crypto-intelligence.local/schemas/outcome.schema.json",
+  "title": "ForecastOutcome",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome_id","forecast_id","resolved_at","target_definition_id","realized_class","realized_return","resolution_data_snapshot_id","schema_version"],
+  "properties": {
+    "outcome_id": {"type":"string","minLength":1},
+    "forecast_id": {"type":"string","minLength":1},
+    "resolved_at": {"type":"string","format":"date-time"},
+    "target_definition_id": {"type":"string","minLength":1},
+    "realized_class": {"type":"string","minLength":1},
+    "realized_return": {"type":"number"},
+    "maximum_favorable_excursion": {"type":["number","null"]},
+    "maximum_adverse_excursion": {"type":["number","null"]},
+    "resolution_data_snapshot_id": {"type":"string","minLength":1},
+    "resolution_rule_version": {"type":["string","null"]},
+    "notes": {"type":["string","null"]},
+    "schema_version": {"type":"string","const":"0.1"}
+  }
+}
