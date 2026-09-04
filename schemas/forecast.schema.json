@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crypto-intelligence.local/schemas/forecast.schema.json",
+  "title": "Forecast",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["forecast_id","created_at","asset","horizon","target_definition_id","market_reference","model_version_id","data_snapshot_id","probabilities","status","schema_version"],
+  "properties": {
+    "forecast_id": {"type":"string","minLength":1},
+    "created_at": {"type":"string","format":"date-time"},
+    "asset": {"type":"string","const":"BTC"},
+    "horizon": {"type":"string","enum":["4h","24h","7d"]},
+    "target_definition_id": {"type":"string","minLength":1,"description":"Versioned definition of DOWN/RANGE/UP or another target; not embedded so labels can evolve without rewriting forecasts."},
+    "market_reference": {
+      "type":"object",
+      "additionalProperties": false,
+      "required":["venue","symbol","price","observed_at"],
+      "properties": {
+        "venue":{"type":"string","minLength":1},
+        "symbol":{"type":"string","minLength":1},
+        "price":{"type":"number","exclusiveMinimum":0},
+        "observed_at":{"type":"string","format":"date-time"}
+      }
+    },
+    "model_version_id": {"type":"string","minLength":1},
+    "data_snapshot_id": {"type":"string","minLength":1},
+    "market_regime_id": {"type":["string","null"]},
+    "probabilities": {
+      "type":"object",
+      "minProperties":2,
+      "additionalProperties":{"type":"number","minimum":0,"maximum":1},
+      "description":"Application validation must additionally enforce sum(probabilities)=1 within tolerance."
+    },
+    "expected_return": {"type":["number","null"]},
+    "confidence_note": {"type":["string","null"]},
+    "status": {"type":"string","enum":["open","closed","void"]},
+    "void_reason": {"type":["string","null"]},
+    "schema_version": {"type":"string","const":"0.1"}
+  }
+}
