@@ -1,0 +1,108 @@
+name: Single-Node Runtime Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'compose.yml'
+      - '.env.example'
+      - 'requirements-runtime.txt'
+      - 'src/**'
+      - 'scripts/collect_approved_sources.py'
+      - 'db/migrations/**'
+      - 'docs/operations/SINGLE_NODE_RUNTIME_v0.1.md'
+      - '.github/workflows/single-node-runtime-guard.yml'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'compose.yml'
+      - '.env.example'
+      - 'requirements-runtime.txt'
+      - 'src/**'
+      - 'scripts/collect_approved_sources.py'
+      - 'db/migrations/**'
+      - 'docs/operations/SINGLE_NODE_RUNTIME_v0.1.md'
+      - '.github/workflows/single-node-runtime-guard.yml'
+
+permissions:
+  contents: read
+
+env:
+  FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create ephemeral runtime env
+        shell: bash
+        run: |
+          test -n "$FRED_API_KEY"
+          cat > .env <<EOF
+          POSTGRES_DB=crypto_intelligence
+          POSTGRES_USER=crypto
+          POSTGRES_PASSWORD=ci-runtime-password
+          FRED_API_KEY=$FRED_API_KEY
+          EOF
+
+      - name: Validate compose model and build collector
+        run: |
+          docker compose config --quiet
+          docker compose build collector
+
+      - name: Start database only
+        shell: bash
+        run: |
+          docker compose up -d db
+          for i in {1..30}; do
+            if docker compose exec -T db pg_isready -U crypto -d crypto_intelligence; then
+              break
+            fi
+            sleep 1
+          done
+          test "$(docker compose ps --services --status running)" = "db"
+
+      - name: Apply migrations manually
+        run: docker compose --profile manual run --rm migrate
+
+      - name: Verify collector disabled default
+        shell: bash
+        run: |
+          output=$(docker compose --profile manual run --rm collector)
+          echo "$output"
+          echo "$output" | grep -q '"status": "disabled"'
+          echo "$output" | grep -q '"network_fetch_performed": false'
+          echo "$output" | grep -q '"database_write_performed": false'
+
+      - name: Run one bounded manual collection
+        run: |
+          docker compose --profile manual run --rm collector \
+            --write \
+            --coinbase-start 2026-09-01T00:00:00Z \
+            --coinbase-end 2026-09-01T03:00:00Z \
+            --fred-realtime-date 2026-09-01 \
+            --fred-observation-start 2026-08-25 \
+            --fred-observation-end 2026-09-01
+
+      - name: Verify persistent-shaped volumes and database rows
+        shell: bash
+        run: |
+          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc 'select count(*) from raw_events;')" = "3"
+          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc 'select count(*) from observations;')" = "30"
+          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc 'select count(*) from observation_raw_events;')" = "30"
+          test "$(docker compose exec -T db psql -U crypto -d crypto_intelligence -Atc \"select count(*) from raw_events where payload_ref like 'file://%';\")" = "3"
+          docker compose --profile manual run --rm --entrypoint sh collector -c 'test "$(find /data/raw -type f -name "*.bin" | wc -l | tr -d " ")" = "3"'
+          python - <<'PY'
+          import json
+          state = json.load(open('PROJECT_STATE.json', encoding='utf-8'))
+          assert state['live_ingestion_allowed'] is False
+          print('runtime package verified; live ingestion remains disabled')
+          PY
+
+      - name: Tear down ephemeral runtime
+        if: always()
+        run: docker compose --profile manual down -v --remove-orphans
