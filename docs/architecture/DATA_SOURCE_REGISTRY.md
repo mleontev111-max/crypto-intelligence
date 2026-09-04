@@ -17,7 +17,7 @@ Each source entry must define:
 - `status`: candidate / approved / disabled
 - `access_mode`: public / api_key / paid
 - `point_in_time_rating`: strong / conditional / weak / unknown
-- `revision_policy`: append_only / provider_revises / unknown
+- `revision_policy`: append_only / provider_revises / provider_revises_or_unknown / unknown
 - `source_event_time_available`: yes / no / partial
 - `provider_publish_time_available`: yes / no / partial
 - `ingestion_time_recorded`: always yes in our system
@@ -27,15 +27,36 @@ Each source entry must define:
 - `failure_modes`
 - `notes`
 
-## Initial candidate registry
+## Current registry
 
 | source_id | category | provider | dataset | status | PIT rating | revision policy | notes |
 |---|---|---|---|---|---|---|---|
-| `market.binance.spot.btcusdt` | market | Binance | BTC/USDT trades/candles | candidate | conditional | provider_revises_or_unknown | Candidate market feed; exact endpoint and retention rules still to be reviewed. |
-| `derivatives.coinglass.btc` | derivatives | CoinGlass | OI/funding/liquidations/taker flow | candidate | conditional | provider_revises_or_unknown | Aggregated derivatives candidate; exact historical semantics require verification. |
+| `market.coinbase.exchange.btcusd.candles` | market | Coinbase Exchange | `BTC-USD` historic REST candles | **approved** | conditional | provider_revises_or_unknown | **Approved only for internal Phase 0 research/read-only use.** Public/third-party display or redistribution is not approved. Exact adapter contract: `COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md`. Live ingestion remains disabled. |
+| `market.binance.spot.btcusdt` | market | Binance | BTC/USDT trades/candles | candidate | conditional | provider_revises_or_unknown | Strong technical candidate, but archive/data licensing scope remains insufficiently resolved for our approval gate. |
+| `derivatives.coinglass.btc` | derivatives | CoinGlass | OI/funding/liquidations/taker flow | candidate | conditional | provider_revises_or_unknown | Aggregated derivatives candidate; exact historical semantics and terms require verification. |
 | `onchain.cryptoquant.btc` | onchain | CryptoQuant | exchange flow/reserve and selected BTC metrics | candidate | weak-to-conditional | provider_revises | Entity clustering can revise historical values; raw snapshots and `available_at` are mandatory. |
-| `macro.fred.core` | macro | FRED | selected rates/macro series | candidate | conditional | provider_revises | Vintage/revision semantics must be handled; do not assume latest historical values were known earlier. |
+| `macro.fred.core` | macro | FRED | selected rates/macro series | candidate | conditional | provider_revises | Vintage/revision support exists, but licensing/ownership is series-specific; no blanket approval. |
 | `news.curated.v0` | news | TBD | curated crypto/macro/regulatory news | candidate | unknown | source_specific | Must preserve first-seen, published and updated timestamps plus content hash. |
+
+## First approved dataset
+
+`market.coinbase.exchange.btcusd.candles`
+
+Approval scope is intentionally narrow:
+
+- Coinbase Exchange public Market Data REST candles;
+- `BTC-USD` only;
+- internal research / Market Observatory development only;
+- read-only requests only;
+- no account, user, order, transfer or wallet access;
+- private raw retention with provenance/hash;
+- no external redistribution/display under this approval;
+- live ingestion still disabled until a write-free adapter test passes and a later checkpoint explicitly changes the flag.
+
+See:
+
+- `docs/architecture/SOURCE_DUE_DILIGENCE_v0.1.md`
+- `docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md`
 
 ## Approval gate
 
@@ -52,4 +73,4 @@ A candidate cannot become `approved` until we document:
 
 ## Phase 0 rule
 
-No live ingestion begins until the canonical schemas exist and at least one market source plus one non-market source have completed the approval gate.
+No live ingestion begins until canonical schemas exist, at least one source is explicitly approved for the intended use, its adapter contract exists, and the write-free adapter test has passed. Approval of one source does **not** authorize other candidate sources or public redistribution.
