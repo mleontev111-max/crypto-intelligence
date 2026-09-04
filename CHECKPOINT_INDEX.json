@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-ephemeral-ingestion-e2e-verified.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-persistent-collector-disabled-verified.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-persistent-collector-disabled-verified.md",
+      "summary": "Verified disabled-by-default persistent-shaped collector with exact RAW byte storage, runtime PostgreSQL writes, repeated idempotent collection, matching payload_ref hashes, 3 RAW / 30 observations / 30 lineage and zero PIT violations; advanced to a minimal single-node Docker runtime package with no scheduler."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-ephemeral-ingestion-e2e-verified.md",
       "summary": "Verified real Coinbase/FRED fetch-to-ephemeral-PostgreSQL ingestion with 3 RAW responses, 30 observations, complete lineage, zero PIT violations, secret redaction, and deterministic idempotency; advanced to a disabled-by-default persistent collector with actual RAW byte storage."
     },
