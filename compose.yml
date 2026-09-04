@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crypto_intelligence}
+      POSTGRES_USER: ${POSTGRES_USER:-crypto}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crypto} -d ${POSTGRES_DB:-crypto_intelligence}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: postgres:16
+    profiles: ["manual"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-crypto_intelligence}
+      PGUSER: ${POSTGRES_USER:-crypto}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - ./db/migrations:/migrations:ro
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        psql -v ON_ERROR_STOP=1 -f /migrations/0001_core_provenance.up.sql &&
+        psql -v ON_ERROR_STOP=1 -f /migrations/0002_core_invariants.up.sql
+
+  collector:
+    build: .
+    profiles: ["manual"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-crypto_intelligence}
+      PGUSER: ${POSTGRES_USER:-crypto}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      FRED_API_KEY: ${FRED_API_KEY:?set FRED_API_KEY}
+      RAW_STORAGE_DIR: /data/raw
+    volumes:
+      - raw_data:/data/raw
+
+volumes:
+  postgres_data:
+  raw_data:
