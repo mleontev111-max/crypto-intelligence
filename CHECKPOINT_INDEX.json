@@ -1,0 +1,12 @@
+{
+  "latest": "docs/checkpoints/2026-09-04-phase-0-bootstrap.md",
+  "checkpoints": [
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-bootstrap.md",
+      "summary": "Bootstrapped project constitution, continuity protocol, Phase 0 architecture, BTC-only MVP scope, forecast ledger and model lifecycle."
+    }
+  ]
+}

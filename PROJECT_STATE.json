@@ -1,0 +1,14 @@
+{
+  "project": "crypto-intelligence",
+  "phase": "0",
+  "status": "active",
+  "current_focus": "foundation",
+  "current_checkpoint": "docs/checkpoints/2026-09-04-phase-0-bootstrap.md",
+  "one_next_action": "Define and commit the Phase 0 data-source registry and canonical schemas for RAW, normalized observations, data snapshots, forecasts, and outcomes; keep scope BTC-only and do not start live ingestion yet.",
+  "live_trading_allowed": false,
+  "paper_trading_allowed": false,
+  "primary_asset_scope": ["BTC"],
+  "forecast_horizons_planned": ["4h", "24h", "7d"],
+  "canonical_entrypoint": "START_HERE.md",
+  "checkpoint_index": "CHECKPOINT_INDEX.json"
+}
