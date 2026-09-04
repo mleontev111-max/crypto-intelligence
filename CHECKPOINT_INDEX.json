@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-persistent-collector-disabled-verified.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-single-node-runtime-verified.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-single-node-runtime-verified.md",
+      "summary": "Verified the manual-only single-node Docker runtime with persistent PostgreSQL and RAW volumes, manual migrations, disabled collector default, one bounded real collection, and successful persistence-shaped CI validation; advanced to one controlled persistent-host validation with scheduling still off."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-persistent-collector-disabled-verified.md",
       "summary": "Verified disabled-by-default persistent-shaped collector with exact RAW byte storage, runtime PostgreSQL writes, repeated idempotent collection, matching payload_ref hashes, 3 RAW / 30 observations / 30 lineage and zero PIT violations; advanced to a minimal single-node Docker runtime package with no scheduler."
     },
