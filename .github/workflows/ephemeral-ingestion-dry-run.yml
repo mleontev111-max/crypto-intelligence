@@ -8,7 +8,11 @@ on:
       - 'src/adapters/fred_h15_treasury.py'
       - 'src/transport/read_only_http.py'
       - 'src/ingestion/**'
+      - 'src/storage/**'
       - 'scripts/e2e_approved_ingestion_dry_run.py'
+      - 'scripts/collect_approved_sources.py'
+      - 'tests/test_raw_file_store.py'
+      - 'tests/test_collector_disabled.py'
       - 'db/migrations/**'
       - '.github/workflows/ephemeral-ingestion-dry-run.yml'
   pull_request:
@@ -17,7 +21,11 @@ on:
       - 'src/adapters/fred_h15_treasury.py'
       - 'src/transport/read_only_http.py'
       - 'src/ingestion/**'
+      - 'src/storage/**'
       - 'scripts/e2e_approved_ingestion_dry_run.py'
+      - 'scripts/collect_approved_sources.py'
+      - 'tests/test_raw_file_store.py'
+      - 'tests/test_collector_disabled.py'
       - 'db/migrations/**'
       - '.github/workflows/ephemeral-ingestion-dry-run.yml'
 
@@ -32,6 +40,7 @@ env:
   PGPASSWORD: ci
   PGDATABASE: crypto_intelligence_test
   PYTHONPATH: .
+  RAW_STORAGE_DIR: ${{ runner.temp }}/crypto-intelligence-raw
 
 jobs:
   dry-run:
@@ -60,6 +69,12 @@ jobs:
           test -n "$FRED_API_KEY"
           echo "FRED_API_KEY configured: ***"
 
+      - name: Verify collector is disabled by default
+        run: |
+          python -m unittest tests.test_collector_disabled -v
+          python -m unittest tests.test_raw_file_store -v
+          python scripts/collect_approved_sources.py
+
       - name: Install PostgreSQL Python client
         run: python -m pip install 'psycopg[binary]>=3.2,<4'
 
@@ -68,10 +83,51 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f db/migrations/0001_core_provenance.up.sql
           psql -v ON_ERROR_STOP=1 -f db/migrations/0002_core_invariants.up.sql
 
-      - name: Run approved-source end-to-end dry run
-        run: python scripts/e2e_approved_ingestion_dry_run.py
+      - name: Run persistent-shaped collector twice in ephemeral CI
+        shell: bash
+        run: |
+          args=(
+            --write
+            --coinbase-start 2026-09-01T00:00:00Z
+            --coinbase-end 2026-09-01T03:00:00Z
+            --fred-realtime-date 2026-09-01
+            --fred-observation-start 2026-08-25
+            --fred-observation-end 2026-09-01
+          )
+          python scripts/collect_approved_sources.py "${args[@]}"
+          python scripts/collect_approved_sources.py "${args[@]}"
 
-      - name: Confirm database is disposable and live ingestion remains disabled
+      - name: Verify persisted RAW bytes, rows, lineage and PIT
+        shell: bash
+        run: |
+          test "$(find "$RAW_STORAGE_DIR" -type f -name '*.bin' | wc -l | tr -d ' ')" = "3"
+          test "$(psql -Atc "SELECT count(*) FROM raw_events;")" = "3"
+          test "$(psql -Atc "SELECT count(*) FROM raw_events WHERE payload_ref LIKE 'file://%';")" = "3"
+          test "$(psql -Atc "SELECT count(*) FROM observations;")" = "30"
+          test "$(psql -Atc "SELECT count(*) FROM observation_raw_events;")" = "30"
+          test "$(psql -Atc "SELECT count(*) FROM observations o JOIN observation_raw_events l USING(observation_id) JOIN raw_events r USING(raw_event_id) WHERE o.available_at < r.available_at;")" = "0"
+          python - <<'PY'
+          from hashlib import sha256
+          from pathlib import Path
+          import os
+          import psycopg
+
+          root = Path(os.environ['RAW_STORAGE_DIR'])
+          files = list(root.rglob('*.bin'))
+          assert len(files) == 3
+          for path in files:
+              digest = sha256(path.read_bytes()).hexdigest()
+              assert path.stem == digest
+          with psycopg.connect() as conn, conn.cursor() as cur:
+              cur.execute('SELECT content_hash, payload_ref FROM raw_events ORDER BY source_id, source_record_id')
+              for digest, payload_ref in cur.fetchall():
+                  path = Path(payload_ref.removeprefix('file://'))
+                  assert path.exists()
+                  assert sha256(path.read_bytes()).hexdigest() == digest
+          print('RAW files and payload_ref hashes verified')
+          PY
+
+      - name: Confirm live ingestion remains disabled
         shell: bash
         run: |
           python - <<'PY'
