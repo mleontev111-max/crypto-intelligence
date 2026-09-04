@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-04-phase-0-approved-source-pair.md",
+  "latest": "docs/checkpoints/2026-09-04-phase-0-readonly-source-probe.md",
   "checkpoints": [
     {
       "date": "2026-09-04",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-04-phase-0-readonly-source-probe.md",
+      "summary": "Added constrained zero-write HTTP probe transport, verified real Coinbase BTC-USD connectivity/evidence, and prepared secret-safe FRED live probes; FRED runtime secret remains the explicit next gate."
+    },
+    {
+      "date": "2026-09-04",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-04-phase-0-approved-source-pair.md",
       "summary": "Approved narrow Coinbase BTC-USD market and FRED DGS2/DGS10 macro source pair, added write-free adapter contracts/tests, and preserved live-ingestion block."
     },
