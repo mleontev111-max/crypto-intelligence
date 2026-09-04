@@ -31,32 +31,30 @@ Each source entry must define:
 
 | source_id | category | provider | dataset | status | PIT rating | revision policy | notes |
 |---|---|---|---|---|---|---|---|
-| `market.coinbase.exchange.btcusd.candles` | market | Coinbase Exchange | `BTC-USD` historic REST candles | **approved** | conditional | provider_revises_or_unknown | **Approved only for internal Phase 0 research/read-only use.** Public/third-party display or redistribution is not approved. Exact adapter contract: `COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md`. Live ingestion remains disabled. |
+| `market.coinbase.exchange.btcusd.candles` | market | Coinbase Exchange | `BTC-USD` historic REST candles | **approved** | conditional | provider_revises_or_unknown | Approved only for internal Phase 0 research/read-only use. Public/third-party display or redistribution is not approved. Adapter: `COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md`. |
+| `macro.fred.h15.dgs2_dgs10` | macro | FRED / Board of Governors | `DGS2`, `DGS10` daily Treasury constant-maturity yields | **approved** | strong-to-conditional | provider_revises | Approved only for these two series. FRED metadata identifies them as `Public Domain: Citation Requested`; FRED API terms and attribution requirements still apply. Adapter: `FRED_H15_TREASURY_ADAPTER_v0.1.md`. Runtime API key required; never persisted. |
 | `market.binance.spot.btcusdt` | market | Binance | BTC/USDT trades/candles | candidate | conditional | provider_revises_or_unknown | Strong technical candidate, but archive/data licensing scope remains insufficiently resolved for our approval gate. |
 | `derivatives.coinglass.btc` | derivatives | CoinGlass | OI/funding/liquidations/taker flow | candidate | conditional | provider_revises_or_unknown | Aggregated derivatives candidate; exact historical semantics and terms require verification. |
 | `onchain.cryptoquant.btc` | onchain | CryptoQuant | exchange flow/reserve and selected BTC metrics | candidate | weak-to-conditional | provider_revises | Entity clustering can revise historical values; raw snapshots and `available_at` are mandatory. |
-| `macro.fred.core` | macro | FRED | selected rates/macro series | candidate | conditional | provider_revises | Vintage/revision support exists, but licensing/ownership is series-specific; no blanket approval. |
 | `news.curated.v0` | news | TBD | curated crypto/macro/regulatory news | candidate | unknown | source_specific | Must preserve first-seen, published and updated timestamps plus content hash. |
 
-## First approved dataset
+## Approved Phase 0 pair
+
+Market:
 
 `market.coinbase.exchange.btcusd.candles`
 
-Approval scope is intentionally narrow:
+Macro/non-market:
 
-- Coinbase Exchange public Market Data REST candles;
-- `BTC-USD` only;
-- internal research / Market Observatory development only;
-- read-only requests only;
-- no account, user, order, transfer or wallet access;
-- private raw retention with provenance/hash;
-- no external redistribution/display under this approval;
-- live ingestion still disabled until the broader Phase 0 gate below is satisfied.
+`macro.fred.h15.dgs2_dgs10`
+
+Both approvals are narrow and internal/research-only. They do not authorize trading, account access, raw-data redistribution, or any unlisted dataset from the same providers.
 
 See:
 
 - `docs/architecture/SOURCE_DUE_DILIGENCE_v0.1.md`
 - `docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md`
+- `docs/architecture/FRED_H15_TREASURY_ADAPTER_v0.1.md`
 
 ## Approval gate
 
@@ -75,4 +73,4 @@ A candidate cannot become `approved` until we document:
 
 Preserve the stricter original rule: **live ingestion remains disabled until at least one market source and at least one non-market source have both completed the approval gate**, their adapter contracts exist, and their write-free adapter tests pass.
 
-Approval of Coinbase as the first market dataset is necessary but **not sufficient** to enable ingestion. A later checkpoint must explicitly change `PROJECT_STATE.live_ingestion_allowed`; no adapter or source approval may change that flag implicitly.
+That source-level condition is now satisfied by the approved Coinbase + FRED pair, but ingestion is **still disabled** until the current adapter guard passes on exact main and a separate checkpoint explicitly approves the controlled ingestion write path. No source or adapter may change `PROJECT_STATE.live_ingestion_allowed` implicitly.
