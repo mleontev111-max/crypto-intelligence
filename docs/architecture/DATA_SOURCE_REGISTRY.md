@@ -51,7 +51,7 @@ Approval scope is intentionally narrow:
 - no account, user, order, transfer or wallet access;
 - private raw retention with provenance/hash;
 - no external redistribution/display under this approval;
-- live ingestion still disabled until a write-free adapter test passes and a later checkpoint explicitly changes the flag.
+- live ingestion still disabled until the broader Phase 0 gate below is satisfied.
 
 See:
 
@@ -71,6 +71,8 @@ A candidate cannot become `approved` until we document:
 7. how raw payloads are archived or, if prohibited, how evidence is preserved;
 8. a read-only ingestion test plan.
 
-## Phase 0 rule
+## Phase 0 live-ingestion gate
 
-No live ingestion begins until canonical schemas exist, at least one source is explicitly approved for the intended use, its adapter contract exists, and the write-free adapter test has passed. Approval of one source does **not** authorize other candidate sources or public redistribution.
+Preserve the stricter original rule: **live ingestion remains disabled until at least one market source and at least one non-market source have both completed the approval gate**, their adapter contracts exist, and their write-free adapter tests pass.
+
+Approval of Coinbase as the first market dataset is necessary but **not sufficient** to enable ingestion. A later checkpoint must explicitly change `PROJECT_STATE.live_ingestion_allowed`; no adapter or source approval may change that flag implicitly.
