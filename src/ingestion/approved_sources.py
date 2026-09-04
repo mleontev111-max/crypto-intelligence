@@ -30,10 +30,22 @@ def coinbase_request_record_id(*, start: str, end: str, granularity: int) -> str
     return f"BTC-USD|start={start}|end={end}|granularity={granularity}"
 
 
-def fred_request_record_id(*, series_id: str, realtime_start: str, realtime_end: str) -> str:
+def fred_request_record_id(
+    *,
+    series_id: str,
+    realtime_start: str,
+    realtime_end: str,
+    observation_start: str | None = None,
+    observation_end: str | None = None,
+) -> str:
     if not series_id or not realtime_start or not realtime_end:
         raise ValueError("series_id and realtime bounds are required")
-    return f"{series_id}|realtime_start={realtime_start}|realtime_end={realtime_end}"
+    if (observation_start is None) != (observation_end is None):
+        raise ValueError("observation_start and observation_end must be supplied together")
+    result = f"{series_id}|realtime_start={realtime_start}|realtime_end={realtime_end}"
+    if observation_start is not None:
+        result += f"|observation_start={observation_start}|observation_end={observation_end}"
+    return result
 
 
 def coinbase_payload_to_rows(
@@ -97,6 +109,8 @@ def fred_payload_to_rows(
     series_id: str,
     realtime_start: str,
     realtime_end: str,
+    observation_start: str | None = None,
+    observation_end: str | None = None,
     observed_at: datetime,
     ingested_at: datetime,
     content_hash: str,
@@ -110,6 +124,8 @@ def fred_payload_to_rows(
             series_id=series_id,
             realtime_start=realtime_start,
             realtime_end=realtime_end,
+            observation_start=observation_start,
+            observation_end=observation_end,
         ),
         source_event_at=None,
         provider_published_at=None,
