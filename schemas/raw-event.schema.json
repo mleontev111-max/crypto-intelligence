@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crypto-intelligence.local/schemas/raw-event.schema.json",
+  "title": "RawEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["raw_event_id","source_id","ingested_at","available_at","content_hash","payload_ref"],
+  "properties": {
+    "raw_event_id": {"type":"string","minLength":1},
+    "source_id": {"type":"string","minLength":1},
+    "source_record_id": {"type":["string","null"]},
+    "source_event_at": {"type":["string","null"],"format":"date-time"},
+    "provider_published_at": {"type":["string","null"],"format":"date-time"},
+    "observed_at": {"type":["string","null"],"format":"date-time"},
+    "ingested_at": {"type":"string","format":"date-time"},
+    "available_at": {"type":"string","format":"date-time","description":"Earliest defensible time the system could have used this record."},
+    "revision": {"type":["string","integer","null"]},
+    "supersedes_raw_event_id": {"type":["string","null"]},
+    "content_hash": {"type":"string","minLength":16},
+    "payload_ref": {"type":"string","minLength":1},
+    "mime_type": {"type":["string","null"]},
+    "schema_version": {"type":"string","const":"0.1"}
+  }
+}
