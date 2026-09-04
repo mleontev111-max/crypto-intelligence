@@ -13,6 +13,7 @@ on:
       - 'docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md'
       - 'docs/architecture/FRED_H15_TREASURY_ADAPTER_v0.1.md'
       - 'docs/architecture/DATA_SOURCE_REGISTRY.md'
+      - 'docs/architecture/READ_ONLY_SOURCE_PROBE_v0.1.md'
       - '.github/workflows/market-adapter-guard.yml'
   pull_request:
     paths:
@@ -25,10 +26,14 @@ on:
       - 'docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md'
       - 'docs/architecture/FRED_H15_TREASURY_ADAPTER_v0.1.md'
       - 'docs/architecture/DATA_SOURCE_REGISTRY.md'
+      - 'docs/architecture/READ_ONLY_SOURCE_PROBE_v0.1.md'
       - '.github/workflows/market-adapter-guard.yml'
 
 permissions:
   contents: read
+
+env:
+  FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
 jobs:
   adapter:
@@ -52,3 +57,12 @@ jobs:
           ! grep -Eiq '(api[_-]?key|secret)[[:space:]]*=[[:space:]]*["'\''][A-Za-z0-9_-]{16,}' src/adapters/*.py src/transport/*.py scripts/probe_approved_sources.py
       - name: Live zero-write Coinbase probe
         run: python scripts/probe_approved_sources.py coinbase
+      - name: Live zero-write FRED probes when runtime secret exists
+        shell: bash
+        run: |
+          if [ -z "$FRED_API_KEY" ]; then
+            echo "FRED live probes SKIPPED: FRED_API_KEY runtime secret is not configured."
+            exit 0
+          fi
+          python scripts/probe_approved_sources.py fred-dgs2
+          python scripts/probe_approved_sources.py fred-dgs10
