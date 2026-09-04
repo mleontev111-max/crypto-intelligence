@@ -1,0 +1,38 @@
+name: Market Adapter Guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/adapters/**'
+      - 'tests/test_coinbase_exchange_candles.py'
+      - 'docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md'
+      - 'docs/architecture/DATA_SOURCE_REGISTRY.md'
+      - '.github/workflows/market-adapter-guard.yml'
+  pull_request:
+    paths:
+      - 'src/adapters/**'
+      - 'tests/test_coinbase_exchange_candles.py'
+      - 'docs/architecture/COINBASE_BTCUSD_CANDLES_ADAPTER_v0.1.md'
+      - 'docs/architecture/DATA_SOURCE_REGISTRY.md'
+      - '.github/workflows/market-adapter-guard.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  adapter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run write-free adapter tests
+        run: python -m unittest tests.test_coinbase_exchange_candles -v
+      - name: Assert adapter contains no database or trading client imports
+        shell: bash
+        run: |
+          ! grep -Eiq 'psycopg|sqlalchemy|create_order|place_order|/orders|/accounts|api[_-]?key|secret' src/adapters/coinbase_exchange_candles.py
