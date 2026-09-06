@@ -1,12 +1,19 @@
 {
-  "latest": "docs/checkpoints/2026-09-06-phase-0-binance-funding-oi-candidate-recorded.md",
+  "latest": "docs/checkpoints/2026-09-06-phase-0-persistent-host-runtime-verified.md",
   "checkpoints": [
     {
       "date": "2026-09-06",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-06-phase-0-persistent-host-runtime-verified.md",
+      "summary": "Deployed the compose.yml package on the selected persistent host (Mac-mini-Mihail.local), applied migrations, verified disabled-by-default collector, ran one bounded real Coinbase/FRED collection (3 RAW / 30 observations / 30 lineage), restarted the db container, and verified full persistence of rows and RAW files; live_ingestion_allowed remains false and scheduling remains off."
+    },
+    {
+      "date": "2026-09-06",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-06-phase-0-binance-funding-oi-candidate-recorded.md",
-      "summary": "Recorded and verified (CI + registry) the already-pushed Binance USD-M Futures funding-rate/open-interest candidate adapter (status: candidate, not approved); persistent-host deployment status remains unconfirmed, so the original persistent-host one_next_action is carried forward unchanged."
+      "summary": "Recorded and verified (CI + registry) the already-pushed Binance USD-M Futures funding-rate/open-interest candidate adapter (status: candidate, not approved); persistent-host deployment status remained unconfirmed at the time, so the original persistent-host one_next_action was carried forward unchanged."
     },
     {
       "date": "2026-09-04",
