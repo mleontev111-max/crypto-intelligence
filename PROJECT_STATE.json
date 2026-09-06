@@ -3,7 +3,7 @@
   "phase": "0",
   "status": "active",
   "current_focus": "foundation",
-  "current_checkpoint": "docs/checkpoints/2026-09-04-phase-0-single-node-runtime-verified.md",
+  "current_checkpoint": "docs/checkpoints/2026-09-06-phase-0-binance-funding-oi-candidate-recorded.md",
   "one_next_action": "Deploy the validated compose.yml package on the selected persistent host, create the host .env locally without committing it, start PostgreSQL, apply migrations, verify the collector is disabled by default, run exactly one bounded manual Coinbase/FRED collection, restart the database container, and verify that the 3 RAW files plus 3 RAW / 30 observation / 30 lineage database rows persist after restart; keep scheduling off and keep live_ingestion_allowed=false until the resulting host evidence is checkpointed.",
   "live_trading_allowed": false,
   "paper_trading_allowed": false,
