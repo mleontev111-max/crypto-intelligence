@@ -18,6 +18,7 @@ A source may be marked `approved` only for the exact dataset/use recorded here. 
 | `derivatives.coinglass.btc` | CoinGlass BTC derivatives | API/key/plan dependent | OI/funding/liquidations/taker-flow candidate. | Exact historical timestamp/revision semantics not yet reviewed in this gate. | Terms/retention not yet approved. | UNKNOWN pending endpoint-level review. | UNKNOWN pending current plan review. | **CANDIDATE** |
 | `onchain.cryptoquant.btc` | CryptoQuant BTC exchange/on-chain metrics | API/key/plan dependent | Entity-labelled on-chain metrics. | **weak-to-conditional** by design: entity clustering can revise history. Raw point-in-time snapshots are mandatory. | Terms/retention not yet approved. | UNKNOWN pending current plan review. | UNKNOWN pending current plan review. | **CANDIDATE** |
 | `news.curated.v0` | TBD | curated crypto/macro/regulatory news | Source-specific. | Must preserve first-seen, published, updated timestamps and content hashes. | UNKNOWN until exact publishers/feeds are selected. | UNKNOWN. | UNKNOWN. | **CANDIDATE** |
+| `derivatives.binance.usdm_futures.btcusdt.funding_oi` | Binance USD-M Futures `BTCUSDT` funding rate + open interest history | Public Market Data API; no key, no account/order authentication | Funding rate: settlement rate + mark price per funding interval, long history. Open interest: `sumOpenInterest` per bucket, `period` in 5m..1d, **short retention window (~30 days observed for this statistics endpoint)**. | **conditional**. `fundingTime`/`timestamp` supplied per row; no immutable-history guarantee assumed; raw responses plus first-seen/ingested/available timestamps required. Late collection start creates a permanent open-interest coverage gap that must be recorded as a quality flag, not backfilled by assumption. | Binance API Terms of Use govern this public market-data use; approval scope limited to `BTCUSDT` funding rate and open interest only, no trading/account/user-data endpoints. | Funding rate default limit 100 / max 1000 per request; open interest max 500 rows per request; respect published request-weight limits, bounded backoff on 429/5xx. | Public access; no per-request fee identified for this exact API use. | **CANDIDATE / PENDING APPROVAL** |
 
 ## Approved Phase 0 source pair
 
@@ -66,3 +67,15 @@ Binance remains a priority technical candidate and better matches the originally
 ## Safety boundary
 
 This document approves exact dataset definitions and internal read-only research use. It does **not** enable live ingestion. The strict Phase 0 gate remains: an approved market + non-market pair, adapter contracts, successful write-free adapter tests, and then a separate explicit checkpoint for any controlled network/write path. `PROJECT_STATE.live_ingestion_allowed` remains `false`.
+
+## Binance USD-M Futures funding rate + open interest (pending approval)
+
+`derivatives.binance.usdm_futures.btcusdt.funding_oi` is not yet approved. It requires the same
+explicit checkpoint sign-off already used for Coinbase/FRED before any write path is enabled.
+Adapter contract: `docs/architecture/BINANCE_FUTURES_FUNDING_OI_ADAPTER_v0.1.md`.
+
+Known gap to resolve before approval: confirm the exact current retention window for
+`futures/data/openInterestHist` against live Binance documentation at approval time (observed
+public evidence points to roughly 30 days; this must be re-verified, not assumed, since Binance
+data-retention behavior for this specific statistics endpoint is not part of the core `fapi/v1`
+contract and could change).

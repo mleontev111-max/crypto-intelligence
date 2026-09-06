@@ -37,6 +37,7 @@ Each source entry must define:
 | `derivatives.coinglass.btc` | derivatives | CoinGlass | OI/funding/liquidations/taker flow | candidate | conditional | provider_revises_or_unknown | Aggregated derivatives candidate; exact historical semantics and terms require verification. |
 | `onchain.cryptoquant.btc` | onchain | CryptoQuant | exchange flow/reserve and selected BTC metrics | candidate | weak-to-conditional | provider_revises | Entity clustering can revise historical values; raw snapshots and `available_at` are mandatory. |
 | `news.curated.v0` | news | TBD | curated crypto/macro/regulatory news | candidate | unknown | source_specific | Must preserve first-seen, published and updated timestamps plus content hash. |
+| `derivatives.binance.usdm_futures.btcusdt.funding_oi` | derivatives | Binance USD-M Futures | `BTCUSDT` funding rate (`fapi/v1/fundingRate`) and open interest history (`futures/data/openInterestHist`) | candidate | conditional | provider_revises_or_unknown | Public, no-auth endpoints. Funding rate history is long; open interest history has a short retention window (~30 days observed). Adapter: `BINANCE_FUTURES_FUNDING_OI_ADAPTER_v0.1.md`. |
 
 ## Approved Phase 0 pair
 
