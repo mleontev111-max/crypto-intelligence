@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-07-phase-0-collection-cadence-proposal.md",
+  "latest": "docs/checkpoints/2026-09-07-phase-0-cadence-plan-refined.md",
   "checkpoints": [
     {
       "date": "2026-09-07",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-07-phase-0-cadence-plan-refined.md",
+      "summary": "Refined the collection-cadence proposal per owner decisions: launchd (not cron), staged rollout (FRED first, Coinbase only after a stable period, each with its own approval/checkpoint), and a read-only gap-check script sketch instead of alerting; still design-only, no scheduler enabled, live_ingestion_allowed remains false."
+    },
+    {
+      "date": "2026-09-07",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-07-phase-0-collection-cadence-proposal.md",
       "summary": "Recorded a design-only proposal for hourly Coinbase 1h-candle and daily FRED DGS2/DGS10 collection cadences, both explicitly bounded and reusing the verified collector; no scheduler enabled, live_ingestion_allowed remains false, owner review still required before automation."
     },

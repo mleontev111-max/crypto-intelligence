@@ -98,28 +98,98 @@ yet.
   expected shape — tracked as follow-up, not implemented here.
 - No automatic historical backfill beyond the bounded windows above.
 
+## Decisions (owner-approved this session, 2026-09-07)
+
+The owner reviewed the open questions below and approved this cadence
+design with three refinements. **These are still design decisions, not an
+activation** — nothing in this section starts a scheduler or touches
+`live_ingestion_allowed`; it narrows *how* enabling would happen, when a
+future session actually does it.
+
+1. **Automation mechanism: `launchd`, not `cron`.** This is a single macOS
+   host. Modern macOS increasingly restricts `cron` behind Full Disk Access
+   / TCC prompts that can silently break a job with no obvious error,
+   whereas `launchd` is the native scheduling mechanism, handles sleep/wake
+   more predictably, and needs no special permission grant for a job that
+   just runs `docker compose`.
+2. **Staged rollout, not both sources at once.** Enable **FRED first**
+   (low frequency — once/day — easy to eyeball manually for a few days),
+   let it run unattended for a period the owner is comfortable with, and
+   only then enable **Coinbase** (higher frequency, more surface for a
+   silent failure to hide in). Do not flip both on in the same step.
+3. **Gap-checking: one small report script, not an alerting system.** Phase
+   0 does not need push alerts. A short read-only script that prints
+   expected-vs-actual buckets is enough to satisfy Phase 1's "observable
+   gaps" exit criterion at this scale; see the sketch below.
+
 ## Path to enabling this cadence (future, separate decision)
 
-If the owner approves this design (as-is or amended), enabling it is a
-distinct future step that should itself get its own checkpoint and
-explicit `live_ingestion_allowed` decision, e.g.:
+Enabling any part of this is still a distinct future step requiring its
+own checkpoint and an explicit `live_ingestion_allowed` decision. With the
+refinements above, the concrete sequence would be:
 
-1. A small wrapper (host `cron`, or a `scripts/run_cadence_*.sh` invoked by
-   `launchd`/`cron` on this Mac mini) that computes the window described
-   above and calls the existing collector — no new ingestion logic.
-2. Re-verify the FRED publish-time assumption against live FRED docs.
-3. Add basic run logging/alerting so a silently-failing cadence is
-   noticed.
-4. Explicit owner approval to flip `live_ingestion_allowed` and start the
-   scheduler, recorded in its own checkpoint with the exact mechanism
-   enabled.
+**Stage 1 — FRED only**
 
-## Open questions for the owner
+1. Re-verify the `14:00 UTC` FRED publish-time assumption against live FRED
+   documentation (still unconfirmed as of this document).
+2. Add a small wrapper script (e.g. `scripts/run_fred_cadence.sh`) that
+   computes `realtime_date`/`observation_start`/`observation_end` per the
+   window above and calls
+   `docker compose --profile manual run --rm collector --write ...` with
+   only the FRED flags — Coinbase flags stay out of this script entirely
+   in Stage 1.
+3. Install a `launchd` `LaunchAgent`/`LaunchDaemon` plist with a
+   `StartCalendarInterval` of once daily, pointed at that wrapper (plist
+   not written yet — this is the design, not the file).
+4. Explicit owner approval to flip `live_ingestion_allowed` for this one
+   source/cadence and load the `launchd` job, recorded in its own
+   checkpoint naming the exact plist and wrapper path enabled.
+5. Run the gap-check script (below) daily for a few days and have the
+   owner confirm no unexplained gaps before moving to Stage 2.
 
-- Is hourly Coinbase / daily FRED the right cadence, or is a coarser
-  cadence (e.g. every 4h for Coinbase, matching the shortest forecast
-  horizon) preferable for Phase 0 to minimize footprint before Phase 1
-  formally starts?
-- Preferred automation mechanism on this host: `cron`, `launchd`, or defer
-  until a proper scheduler service is justified?
-- Who/what reviews cadence failures (missed runs, gaps) once enabled?
+**Stage 2 — add Coinbase**
+
+6. Add `scripts/run_coinbase_cadence.sh` (hourly, 4-bucket window, same
+   shape as the FRED wrapper) and its own `launchd` job
+   (`StartCalendarInterval` hourly at minute 5).
+7. Separate explicit owner approval and checkpoint before this job is
+   loaded — Stage 1 approval does not carry over to Stage 2.
+8. Extend the gap-check script to cover expected hourly Coinbase buckets
+   (sketch below already includes both).
+
+Nothing in Stage 1 or Stage 2 is built or installed yet; both remain
+future work pending the trigger described above.
+
+## Gap-check report (sketch, not implemented)
+
+A single read-only script/query — no alerting integration, run manually or
+by its own daily `launchd` tick that just prints to a log — comparing
+expected vs. actual coverage:
+
+- **Coinbase:** for a lookback window (e.g. last 7 days), generate the set
+  of expected `bucket_start` timestamps at 1h steps and `EXCEPT` against
+  distinct observed bucket timestamps already in `observations` for
+  `market.coinbase.exchange.btcusd.candles` — any remainder is a gap to
+  print.
+- **FRED:** for the same lookback window, generate the set of expected
+  US business days (weekdays, minus a static or simply-approximated
+  US-holiday list — exact holiday handling to be decided when this is
+  built) and `EXCEPT` against distinct observed observation dates per
+  series (`DGS2`, `DGS10`) already in `observations` — any remainder is a
+  gap to print.
+- Output: plain text/JSON list of missing buckets/dates per source, printed
+  to stdout/log. No database writes, no external notification — reading
+  this is the owner's job at this stage, consistent with "one small script,
+  not an alerting system" above.
+- This script is read-only against already-ingested data; it requires no
+  new adapter code and does not itself perform any network fetch.
+
+## Open questions (resolved above) — kept for history
+
+- ~~Is hourly Coinbase / daily FRED the right cadence, or coarser?~~ →
+  cadence approved as originally proposed; sequencing (not frequency) is
+  what changed.
+- ~~Preferred automation mechanism?~~ → `launchd`.
+- ~~Who/what reviews cadence failures?~~ → the owner, manually, via the
+  gap-check script above, at this scale — revisit if/when volume justifies
+  real alerting.
