@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-07-phase-0-cadence-plan-refined.md",
+  "latest": "docs/checkpoints/2026-09-07-phase-0-fred-cadence-stage1-prepared.md",
   "checkpoints": [
     {
       "date": "2026-09-07",
       "phase": "0",
       "status": "active",
+      "path": "docs/checkpoints/2026-09-07-phase-0-fred-cadence-stage1-prepared.md",
+      "summary": "Prepared Stage 1 (FRED-only cadence) end-to-end: confirmed FRED's 4:15pm ET publish time (22:00 UTC run time), added a --sources flag to the collector so FRED can run alone, wrote and live-verified scripts/run_fred_cadence.sh, drafted (but did not load) a launchd plist template; live_ingestion_allowed remains false and no scheduler was loaded."
+    },
+    {
+      "date": "2026-09-07",
+      "phase": "0",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-07-phase-0-cadence-plan-refined.md",
       "summary": "Refined the collection-cadence proposal per owner decisions: launchd (not cron), staged rollout (FRED first, Coinbase only after a stable period, each with its own approval/checkpoint), and a read-only gap-check script sketch instead of alerting; still design-only, no scheduler enabled, live_ingestion_allowed remains false."
     },

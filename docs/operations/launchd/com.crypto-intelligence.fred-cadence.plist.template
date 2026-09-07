@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TEMPLATE ONLY. Not installed, not loaded, no job runs from this file as
+  committed. This is Stage 1 material for
+  docs/operations/COLLECTION_CADENCE_PROPOSAL_v0.1.md — do not copy this
+  into ~/Library/LaunchAgents/ or run `launchctl load` on it without the
+  explicit owner approval and dedicated checkpoint that Stage 1 requires.
+
+  What this would do, if loaded: once per day, run
+  scripts/run_fred_cadence.sh as a user LaunchAgent (not a root
+  LaunchDaemon — Docker Desktop runs in the user's session, so a
+  LaunchAgent is required; this only fires while the user is logged in).
+
+  Schedule: Hour=1, Minute=0 in the host's LOCAL time zone. This host
+  (Mac-mini-Mihail.local) is fixed Europe/Moscow (UTC+3, no DST —
+  confirmed via `date +%Z%z` -> MSK +0300 and
+  `readlink /etc/localtime` -> .../Europe/Moscow), so 01:00 local time is
+  exactly 22:00 UTC every day of the year. 22:00 UTC was chosen because
+  the Federal Reserve's H.15 release (source of DGS2/DGS10) posts at
+  4:15pm US Eastern Time Mon-Fri, and 22:00 UTC stays safely after that in
+  every US DST state (18:00 ET during EDT, 17:00 ET during EST) — see the
+  "Decisions" note in COLLECTION_CADENCE_PROPOSAL_v0.1.md for the citation.
+  If this host's time zone or the Fed's publish time ever changes, this
+  Hour value must be recomputed — it is not automatically correct.
+
+  Before ever loading this file for real: `mkdir -p
+  /Users/mihailleontev/crypto-intelligence/logs` (StandardOutPath/
+  StandardErrorPath below do not create parent directories).
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.crypto-intelligence.fred-cadence</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/mihailleontev/crypto-intelligence/scripts/run_fred_cadence.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>1</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/mihailleontev/crypto-intelligence/logs/fred-cadence.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/mihailleontev/crypto-intelligence/logs/fred-cadence.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

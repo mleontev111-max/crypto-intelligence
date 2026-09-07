@@ -75,6 +75,16 @@ The collector performs the following sequence per source response:
 
 Running the exact same bounded collection again is expected to be idempotent by deterministic IDs/content hashes.
 
+### Selecting a single source
+
+`--sources {all,coinbase,fred}` (default `all`) limits a bounded run to one
+approved source. Only the flags for the selected source(s) are required —
+e.g. `--sources fred` needs the three `--fred-*` flags but not
+`--coinbase-start`/`--coinbase-end`, and vice versa for `--sources
+coinbase`. This exists to support the FRED-only Stage 1 cadence in
+`docs/operations/COLLECTION_CADENCE_PROPOSAL_v0.1.md`; it changes nothing
+about what a plain `--write` (no `--sources`) run does.
+
 ## Inspect counts
 
 ```bash

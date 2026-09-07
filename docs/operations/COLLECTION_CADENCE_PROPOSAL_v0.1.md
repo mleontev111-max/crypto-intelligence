@@ -62,12 +62,14 @@ an announcement that Phase 1 has started.
 
 ### FRED DGS2 / DGS10
 
-- **Frequency:** once per day. Proposed time: `14:00 UTC`, chosen as a
-  conservative guess that the prior business day's H.15 value has been
-  published; **the exact FRED publication schedule must be re-confirmed
-  against live FRED documentation before this is ever automated** — same
-  caveat style already used for the Binance OI retention window in
-  `DATA_SOURCE_REGISTRY.md`, not assumed here either.
+- **Frequency:** once per day, at **`22:00 UTC`** — confirmed (2026-09-07)
+  against the Federal Reserve's own H.15 release page: "The release is
+  posted daily Monday through Friday at 4:15pm [ET]", not posted on
+  holidays (<https://www.federalreserve.gov/releases/h15/>). `22:00 UTC`
+  stays safely after that regardless of US daylight saving (18:00 ET
+  during EDT, 17:00 ET during EST), so the schedule does not need to
+  change twice a year. This replaces the earlier unconfirmed `14:00 UTC`
+  placeholder, which was too early and has been corrected.
 - **Window:** `realtime_date = today (UTC)`; `observation_start = today − 10
   calendar days`; `observation_end = today`.
   - Rationale: a 10-day lookback safely spans weekends and the longest
@@ -130,22 +132,39 @@ refinements above, the concrete sequence would be:
 
 **Stage 1 — FRED only**
 
-1. Re-verify the `14:00 UTC` FRED publish-time assumption against live FRED
-   documentation (still unconfirmed as of this document).
-2. Add a small wrapper script (e.g. `scripts/run_fred_cadence.sh`) that
-   computes `realtime_date`/`observation_start`/`observation_end` per the
-   window above and calls
-   `docker compose --profile manual run --rm collector --write ...` with
-   only the FRED flags — Coinbase flags stay out of this script entirely
-   in Stage 1.
-3. Install a `launchd` `LaunchAgent`/`LaunchDaemon` plist with a
-   `StartCalendarInterval` of once daily, pointed at that wrapper (plist
-   not written yet — this is the design, not the file).
-4. Explicit owner approval to flip `live_ingestion_allowed` for this one
-   source/cadence and load the `launchd` job, recorded in its own
-   checkpoint naming the exact plist and wrapper path enabled.
-5. Run the gap-check script (below) daily for a few days and have the
-   owner confirm no unexplained gaps before moving to Stage 2.
+1. ✅ Done (2026-09-07): re-verified the FRED publish-time assumption
+   against `federalreserve.gov/releases/h15/` — see the corrected `22:00
+   UTC` frequency above.
+2. ✅ Done (2026-09-07): the collector
+   (`scripts/collect_approved_sources.py`) gained a `--sources
+   {all,coinbase,fred}` argument (default `all`, so existing/default
+   behavior and CI are unchanged) so a run can genuinely touch only FRED.
+   Covered by `tests/test_collector_source_selection.py` and verified live
+   on this host: a `--sources fred` bounded run correctly wrote only
+   `fred_dgs2`/`fred_dgs10` (no `coinbase` key in the summary, no new
+   Coinbase RAW/observations), and a real fresh-window run produced 2 new
+   RAW rows / 10 new observations as expected, all idempotent on repeat.
+   Added `scripts/run_fred_cadence.sh`, which computes
+   `realtime_date = today (UTC)` / `observation_start = today − 10 days` /
+   `observation_end = today` and calls the collector with
+   `--sources fred` — verified with a live run on this host (see the
+   2026-09-07 checkpoint for exact output/counts).
+3. ✅ Drafted, not installed: `launchd` template at
+   `docs/operations/launchd/com.crypto-intelligence.fred-cadence.plist.template`
+   — a **user LaunchAgent** (Docker Desktop runs in the user session, so a
+   root LaunchDaemon would not have socket access) firing daily at local
+   `01:00` (`Europe/Moscow`, fixed UTC+3, no DST on this host — confirmed
+   via `date +%Z%z` / `readlink /etc/localtime`), which equals `22:00 UTC`.
+   `plutil -lint` validates the file. It is a `.template` on purpose and is
+   **not** copied into `~/Library/LaunchAgents/` and **not** loaded by
+   anything in this repository.
+4. ⏳ Not done: explicit owner approval to flip `live_ingestion_allowed`
+   for this one source/cadence and actually copy+load the `launchd` job,
+   to be recorded in its own checkpoint naming the exact plist and wrapper
+   path enabled. This is the remaining gate before Stage 1 is "on."
+5. ⏳ Not done: run the gap-check script (below — still only a sketch, not
+   implemented) daily for a few days and have the owner confirm no
+   unexplained gaps before moving to Stage 2.
 
 **Stage 2 — add Coinbase**
 

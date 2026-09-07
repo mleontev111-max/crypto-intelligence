@@ -28,6 +28,12 @@ def _dt(value: str) -> datetime:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Collect approved public sources into RAW + observations")
     parser.add_argument("--write", action="store_true", help="explicitly enable network fetch + configured DB write")
+    parser.add_argument(
+        "--sources",
+        choices=("all", "coinbase", "fred"),
+        default="all",
+        help="which approved source(s) to collect this run (default: all)",
+    )
     parser.add_argument("--coinbase-start")
     parser.add_argument("--coinbase-end")
     parser.add_argument("--fred-realtime-date")
@@ -117,78 +123,88 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     raw_storage_dir = _require(os.environ.get("RAW_STORAGE_DIR"), "RAW_STORAGE_DIR")
-    fred_api_key = _require(os.environ.get("FRED_API_KEY"), "FRED_API_KEY")
-    coinbase_start = _require(args.coinbase_start, "--coinbase-start")
-    coinbase_end = _require(args.coinbase_end, "--coinbase-end")
-    fred_realtime_date = _require(args.fred_realtime_date, "--fred-realtime-date")
-    fred_observation_start = _require(args.fred_observation_start, "--fred-observation-start")
-    fred_observation_end = _require(args.fred_observation_end, "--fred-observation-end")
 
-    coinbase_result, coinbase_raw, coinbase_rows = _fetch_coinbase(
-        start=coinbase_start,
-        end=coinbase_end,
-        raw_storage_dir=raw_storage_dir,
-    )
-    fred2_result, fred2_raw, fred2_rows = _fetch_fred(
-        series_id="DGS2",
-        api_key=fred_api_key,
-        realtime_date=fred_realtime_date,
-        observation_start=fred_observation_start,
-        observation_end=fred_observation_end,
-        raw_storage_dir=raw_storage_dir,
-    )
-    fred10_result, fred10_raw, fred10_rows = _fetch_fred(
-        series_id="DGS10",
-        api_key=fred_api_key,
-        realtime_date=fred_realtime_date,
-        observation_start=fred_observation_start,
-        observation_end=fred_observation_end,
-        raw_storage_dir=raw_storage_dir,
-    )
+    collect_coinbase = args.sources in ("all", "coinbase")
+    collect_fred = args.sources in ("all", "fred")
 
-    if not coinbase_rows or not fred2_rows or not fred10_rows:
-        raise RuntimeError("each approved source must produce at least one observation")
+    fred_api_key = _require(os.environ.get("FRED_API_KEY"), "FRED_API_KEY") if collect_fred else None
+    coinbase_start = _require(args.coinbase_start, "--coinbase-start") if collect_coinbase else None
+    coinbase_end = _require(args.coinbase_end, "--coinbase-end") if collect_coinbase else None
+    fred_realtime_date = _require(args.fred_realtime_date, "--fred-realtime-date") if collect_fred else None
+    fred_observation_start = _require(args.fred_observation_start, "--fred-observation-start") if collect_fred else None
+    fred_observation_end = _require(args.fred_observation_end, "--fred-observation-end") if collect_fred else None
+
+    bundles: list[tuple] = []
+    summary: dict = {
+        "status": "success",
+        "persistent_collector_mode": True,
+        "scheduled": False,
+        "sources": args.sources,
+    }
+
+    if collect_coinbase:
+        coinbase_result, coinbase_raw, coinbase_rows = _fetch_coinbase(
+            start=coinbase_start,
+            end=coinbase_end,
+            raw_storage_dir=raw_storage_dir,
+        )
+        if not coinbase_rows:
+            raise RuntimeError("each approved source must produce at least one observation")
+        bundles.append((coinbase_raw, coinbase_rows))
+        summary["coinbase"] = {
+            "http_status": coinbase_result.evidence.status,
+            "safe_url": coinbase_result.evidence.safe_url,
+            "sha256": coinbase_raw.content_hash,
+            "observations": len(coinbase_rows),
+            "payload_ref": coinbase_raw.payload_ref,
+        }
+
+    if collect_fred:
+        fred2_result, fred2_raw, fred2_rows = _fetch_fred(
+            series_id="DGS2",
+            api_key=fred_api_key,
+            realtime_date=fred_realtime_date,
+            observation_start=fred_observation_start,
+            observation_end=fred_observation_end,
+            raw_storage_dir=raw_storage_dir,
+        )
+        fred10_result, fred10_raw, fred10_rows = _fetch_fred(
+            series_id="DGS10",
+            api_key=fred_api_key,
+            realtime_date=fred_realtime_date,
+            observation_start=fred_observation_start,
+            observation_end=fred_observation_end,
+            raw_storage_dir=raw_storage_dir,
+        )
+        if not fred2_rows or not fred10_rows:
+            raise RuntimeError("each approved source must produce at least one observation")
+        bundles.append((fred2_raw, fred2_rows))
+        bundles.append((fred10_raw, fred10_rows))
+        summary["fred_dgs2"] = {
+            "http_status": fred2_result.evidence.status,
+            "safe_url": fred2_result.evidence.safe_url,
+            "sha256": fred2_raw.content_hash,
+            "observations": len(fred2_rows),
+            "payload_ref": fred2_raw.payload_ref,
+        }
+        summary["fred_dgs10"] = {
+            "http_status": fred10_result.evidence.status,
+            "safe_url": fred10_result.evidence.safe_url,
+            "sha256": fred10_raw.content_hash,
+            "observations": len(fred10_rows),
+            "payload_ref": fred10_raw.payload_ref,
+        }
 
     import psycopg  # Lazy import: disabled mode has no PostgreSQL dependency.
 
     conninfo = os.environ.get("DATABASE_URL", "")
     with psycopg.connect(conninfo) as conn:
         seed_approved_sources(conn)
-        for raw, rows in (
-            (coinbase_raw, coinbase_rows),
-            (fred2_raw, fred2_rows),
-            (fred10_raw, fred10_rows),
-        ):
+        for raw, rows in bundles:
             persist_bundle(conn, raw, rows)
 
-    summary = {
-        "status": "success",
-        "persistent_collector_mode": True,
-        "scheduled": False,
-        "coinbase": {
-            "http_status": coinbase_result.evidence.status,
-            "safe_url": coinbase_result.evidence.safe_url,
-            "sha256": coinbase_raw.content_hash,
-            "observations": len(coinbase_rows),
-            "payload_ref": coinbase_raw.payload_ref,
-        },
-        "fred_dgs2": {
-            "http_status": fred2_result.evidence.status,
-            "safe_url": fred2_result.evidence.safe_url,
-            "sha256": fred2_raw.content_hash,
-            "observations": len(fred2_rows),
-            "payload_ref": fred2_raw.payload_ref,
-        },
-        "fred_dgs10": {
-            "http_status": fred10_result.evidence.status,
-            "safe_url": fred10_result.evidence.safe_url,
-            "sha256": fred10_raw.content_hash,
-            "observations": len(fred10_rows),
-            "payload_ref": fred10_raw.payload_ref,
-        },
-    }
     encoded = json.dumps(summary, sort_keys=True)
-    if fred_api_key in encoded:
+    if fred_api_key and fred_api_key in encoded:
         raise RuntimeError("FRED secret appeared in collector summary")
     print(encoded)
     return 0
