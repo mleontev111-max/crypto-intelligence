@@ -1,10 +1,17 @@
 {
-  "latest": "docs/checkpoints/2026-09-06-phase-0-persistent-host-runtime-verified.md",
+  "latest": "docs/checkpoints/2026-09-07-phase-0-collection-cadence-proposal.md",
   "checkpoints": [
+    {
+      "date": "2026-09-07",
+      "phase": "0",
+      "status": "active",
+      "path": "docs/checkpoints/2026-09-07-phase-0-collection-cadence-proposal.md",
+      "summary": "Recorded a design-only proposal for hourly Coinbase 1h-candle and daily FRED DGS2/DGS10 collection cadences, both explicitly bounded and reusing the verified collector; no scheduler enabled, live_ingestion_allowed remains false, owner review still required before automation."
+    },
     {
       "date": "2026-09-06",
       "phase": "0",
-      "status": "active",
+      "status": "superseded",
       "path": "docs/checkpoints/2026-09-06-phase-0-persistent-host-runtime-verified.md",
       "summary": "Deployed the compose.yml package on the selected persistent host (Mac-mini-Mihail.local), applied migrations, verified disabled-by-default collector, ran one bounded real Coinbase/FRED collection (3 RAW / 30 observations / 30 lineage), restarted the db container, and verified full persistence of rows and RAW files; live_ingestion_allowed remains false and scheduling remains off."
     },
